@@ -1,50 +1,21 @@
-Copyright (c) 2026 Alan Rojas. All rights reserved.
+MIT License
 
-PROPRIETARY LICENSE
+Copyright (c) 2026 Alan Rojas
 
-This repository and everything in it (source code, documentation, designs,
-diagrams, configuration and other files, together the "Software") is the
-property of the copyright holder. The Software is published publicly for
-viewing and evaluation only. It is NOT free software and NOT open source.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-1. Permitted use. You may:
-   a. view and read the Software on the platform where it is published;
-   b. clone or download the Software and run it on your own computer,
-      solely for your personal, non-commercial evaluation of it, and
-      provided you delete all copies when your evaluation ends.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-2. Restrictions. Except as expressly permitted in section 1, you may not,
-   without the prior written permission of the copyright holder:
-   a. use, run, or deploy the Software, in whole or in part, in production,
-      for any commercial purpose, or for or on behalf of any third party;
-   b. copy, reproduce, modify, translate, or create derivative works of the
-      Software;
-   c. distribute, publish, sublicense, sell, rent, lease, or otherwise make
-      the Software available to any third party;
-   d. use the Software, in whole or in part, to build, train, or improve a
-      competing product or service, or any machine learning model;
-   e. remove or alter this license or any copyright notice.
-
-3. No implied rights. No license or right is granted by implication,
-   estoppel, or otherwise, except as expressly stated in section 1. All
-   rights not expressly granted are reserved by the copyright holder.
-
-4. Contributions. Unless agreed otherwise in writing, any contribution you
-   submit to this repository (for example through a pull request) is
-   assigned to the copyright holder, and you confirm that you have the right
-   to make that assignment.
-
-5. Termination. Any use of the Software in breach of this license
-   automatically terminates every permission granted to you under it.
-
-6. No warranty. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
-   KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
-
-7. Limitation of liability. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE
-   FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
-   CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
-   THE SOFTWARE OR THE USE OF OR OTHER DEALINGS IN THE SOFTWARE.
-
-For licensing enquiries, including commercial licenses, contact the
-copyright holder through the repository's hosting platform.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

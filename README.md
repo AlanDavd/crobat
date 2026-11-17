@@ -7,7 +7,9 @@ And it has **no queue**. No Kafka, no RabbitMQ, no Redis. The queue is a MySQL t
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)](go.mod)
 [![MySQL](https://img.shields.io/badge/MySQL-8.4-4479A1?logo=mysql&logoColor=white)](deploy/mysql/schema.sql)
 [![Cassandra](https://img.shields.io/badge/Cassandra-4.1-1287B1?logo=apachecassandra&logoColor=white)](internal/adapter/cassandra/cassandra.go)
-[![License: Proprietary](https://img.shields.io/badge/license-proprietary-red)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+![Crobat architecture](docs/architecture.svg)
 
 ---
 
@@ -142,6 +144,4 @@ docker compose down -v     # stop and wipe local data
 
 ## License
 
-Copyright © 2026 Alan Rojas. All rights reserved.
-
-This is **not open source**. The code is public for viewing and for personal, non-commercial evaluation on your own machine. Production or commercial use, redistribution, and derivative works require written permission. See [LICENSE](LICENSE).
+[MIT](LICENSE) © 2026 Alan Rojas
