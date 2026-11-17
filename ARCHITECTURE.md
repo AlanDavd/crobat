@@ -57,10 +57,15 @@ cmd/crobat/main.go              wiring (env → adapters → services) + CLI
 internal/domain/                pure rules, no I/O
     domain.go                   Task, Job, Priority, validation, cron next-run,
                                 Job.Apply (state machine), Backoff, FairPick
-internal/app/                   the six services; depend only on ports
+internal/app/
     ports.go                    TaskStore, JobStore, HistoryStore, Caller
-    services.go                 TaskService, Scheduler, Executor, Reconciler,
-                                Archiver, JobService
+internal/services/              the six services; depend only on ports (README each)
+    taskservice/                write API for tasks
+    scheduler/                  tasks → pending jobs, 30 s ahead
+    executor/                   claim, fire on timer, call, save under fencing
+    reconciler/                 expired leases → pending / dead
+    archiver/                   MySQL → Cassandra, then delete
+    jobservice/                 status, history, DLQ, manual retry
 internal/adapter/               implementations of the ports
     mysql/                      TaskStore + JobStore; AES-GCM secrets at rest
     cassandra/                  HistoryStore
@@ -70,7 +75,7 @@ deploy/mysql/schema.sql         tables + indexes (loaded by the mysql container)
 docker-compose.yml, Dockerfile
 ```
 
-Dependencies point inward: `adapter → app → domain`. The domain and app packages never import a driver. Swapping MySQL for Vitess, or Cassandra for another store, means rewriting one adapter.
+Dependencies point inward: `adapter → services → app (ports) → domain`. The domain, app, and services packages never import a driver. Swapping MySQL for Vitess, or Cassandra for another store, means rewriting one adapter.
 
 ---
 

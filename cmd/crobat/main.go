@@ -25,7 +25,12 @@ import (
 	"crobat/internal/adapter/cassandra"
 	"crobat/internal/adapter/httpapi"
 	"crobat/internal/adapter/mysql"
-	"crobat/internal/app"
+	"crobat/internal/services/archiver"
+	"crobat/internal/services/executor"
+	"crobat/internal/services/jobservice"
+	"crobat/internal/services/reconciler"
+	"crobat/internal/services/scheduler"
+	"crobat/internal/services/taskservice"
 )
 
 const usage = `crobat: cron as a service.
@@ -146,7 +151,7 @@ func serve(name string) error {
 		if err != nil {
 			return err
 		}
-		return listen(ctx, env("HTTP_ADDR", ":8080"), httpapi.TaskAPI(&app.TaskService{Tasks: db}, secret, log), log)
+		return listen(ctx, env("HTTP_ADDR", ":8080"), httpapi.TaskAPI(&taskservice.Service{Tasks: db}, secret, log), log)
 	case "job-api":
 		secret, err := jwtSecret()
 		if err != nil {
@@ -157,9 +162,9 @@ func serve(name string) error {
 			return fmt.Errorf("cassandra: %w", err)
 		}
 		defer h.Close()
-		return listen(ctx, env("HTTP_ADDR", ":8081"), httpapi.JobAPI(&app.JobService{Jobs: db, History: h}, secret, log), log)
+		return listen(ctx, env("HTTP_ADDR", ":8081"), httpapi.JobAPI(&jobservice.Service{Jobs: db, History: h}, secret, log), log)
 	case "scheduler":
-		(&app.Scheduler{Tasks: db, Interval: envDur("SCHEDULER_INTERVAL", "5s"),
+		(&scheduler.Service{Tasks: db, Interval: envDur("SCHEDULER_INTERVAL", "5s"),
 			Lookahead: envDur("SCHEDULER_LOOKAHEAD", "30s"), Batch: envInt("SCHEDULER_BATCH", 500), Log: log}).Run(ctx)
 	case "executor":
 		var allow []netip.Prefix
@@ -176,17 +181,17 @@ func serve(name string) error {
 			log.Warn("SSRF allowlist active: dev only", "cidrs", allow)
 		}
 		host, _ := os.Hostname()
-		(&app.Executor{Jobs: db, Caller: caller.New(allow), WorkerID: env("WORKER_ID", host),
+		(&executor.Service{Jobs: db, Caller: caller.New(allow), WorkerID: env("WORKER_ID", host),
 			Workers: envInt("EXECUTOR_WORKERS", 64), Poll: envDur("EXECUTOR_POLL", "500ms"), Log: log}).Run(ctx)
 	case "reconciler":
-		(&app.Reconciler{Jobs: db, Interval: envDur("RECONCILER_INTERVAL", "5s"), Batch: 1000, Log: log}).Run(ctx)
+		(&reconciler.Service{Jobs: db, Interval: envDur("RECONCILER_INTERVAL", "5s"), Batch: 1000, Log: log}).Run(ctx)
 	case "archiver":
 		h, err := history()
 		if err != nil {
 			return fmt.Errorf("cassandra: %w", err)
 		}
 		defer h.Close()
-		(&app.Archiver{Jobs: db, History: h, Interval: envDur("ARCHIVER_INTERVAL", "10s"), Batch: 500,
+		(&archiver.Service{Jobs: db, History: h, Interval: envDur("ARCHIVER_INTERVAL", "10s"), Batch: 500,
 			KeepSucceeded: envDur("ARCHIVE_SUCCEEDED_AFTER", "1h"), KeepDead: envDur("ARCHIVE_DEAD_AFTER", "336h"), Log: log}).Run(ctx)
 	default:
 		return fmt.Errorf("unknown service %q", name)

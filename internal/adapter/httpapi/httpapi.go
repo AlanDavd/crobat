@@ -16,8 +16,9 @@ import (
 	"strings"
 	"time"
 
-	"crobat/internal/app"
 	"crobat/internal/domain"
+	"crobat/internal/services/jobservice"
+	"crobat/internal/services/taskservice"
 )
 
 // ------------------------------------------------------------------------ JWT
@@ -147,7 +148,7 @@ func decodeTask(r *http.Request) (domain.Task, error) {
 
 // ------------------------------------------------------------------ task API
 
-func TaskAPI(svc *app.TaskService, secret []byte, log *slog.Logger) http.Handler {
+func TaskAPI(svc *taskservice.Service, secret []byte, log *slog.Logger) http.Handler {
 	a := newAPI(secret, log)
 	a.handle("POST /tasks", http.StatusCreated, func(ctx context.Context, tenant string, r *http.Request) (any, error) {
 		t, err := decodeTask(r)
@@ -187,7 +188,7 @@ func TaskAPI(svc *app.TaskService, secret []byte, log *slog.Logger) http.Handler
 
 // ------------------------------------------------------------------- job API
 
-func JobAPI(svc *app.JobService, secret []byte, log *slog.Logger) http.Handler {
+func JobAPI(svc *jobservice.Service, secret []byte, log *slog.Logger) http.Handler {
 	a := newAPI(secret, log)
 	a.handle("GET /jobs/{id}", http.StatusOK, func(ctx context.Context, tenant string, r *http.Request) (any, error) {
 		return svc.Get(ctx, tenant, r.PathValue("id"))

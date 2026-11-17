@@ -91,27 +91,30 @@ bin/crobat task pause|resume|delete <task-id>
 
 The same operations are available over REST: `task-api` on `:8080`, `job-api` on `:8081`. See [ARCHITECTURE.md § Running locally](ARCHITECTURE.md#8-running-locally).
 
-## How it works
+## Services
 
-| Service | Role |
-|---|---|
-| **task-api** | Create, edit, pause, resume, and delete tasks |
-| **scheduler** | Every 5 s, turns tasks due in the next 30 s into pending jobs, in one transaction |
-| **executor** | Claims jobs with `SKIP LOCKED`, fires each on its own timer, saves the result under a fencing guard |
-| **reconciler** | Returns jobs whose executor died (expired lease) to pending |
-| **archiver** | Copies finished jobs to Cassandra, then deletes them from MySQL |
-| **job-api** | Status, history, DLQ, manual retry |
+Crobat runs as six services. Each one is a hexagon: it depends only on the ports in [internal/app/ports.go](internal/app/ports.go), and the adapters in [internal/adapter/](internal/adapter/) plug MySQL, Cassandra, and HTTP into those ports. Each service folder has its own README with its API or loop, guarantees, configuration, and scaling notes.
+
+| Service | Objective | Folder | Run as |
+|---|---|---|---|
+| **Task Service** | Let tenants create, edit, pause, resume, and delete tasks, stored durably in MySQL | [internal/services/taskservice/](internal/services/taskservice/) | `crobat serve task-api` · `:8080` |
+| **Scheduler** | Turn tasks due in the next 30 s into pending jobs, in one transaction, every 5 s | [internal/services/scheduler/](internal/services/scheduler/) | `crobat serve scheduler` |
+| **Executor** | Claim jobs with `SKIP LOCKED`, fire each on its own timer, call the endpoint, save the result under a fencing guard | [internal/services/executor/](internal/services/executor/) | `crobat serve executor` |
+| **Reconciler** | Rescue jobs whose executor died by returning expired leases to pending (or dead) | [internal/services/reconciler/](internal/services/reconciler/) | `crobat serve reconciler` |
+| **Archiver** | Move finished jobs to Cassandra first, then delete them from MySQL | [internal/services/archiver/](internal/services/archiver/) | `crobat serve archiver` |
+| **Job Service** | The read side: job status, task history, DLQ, manual retry | [internal/services/jobservice/](internal/services/jobservice/) | `crobat serve job-api` · `:8081` |
 
 A **task** is the configuration. A **job** is one execution of it, and it copies the task's request when it is planned, so editing a task never changes a run that is already scheduled.
 
-Each service is a hexagon (ports and adapters). All six ship as one binary, `crobat serve <service>`, which is also the CLI. [ARCHITECTURE.md](ARCHITECTURE.md) has the full design: data model, job lifecycle, guarantees, the SSRF defence, why MySQL and not Postgres, configuration, and known limits.
+All six ship as one binary, `crobat serve <service>`, which is also the CLI. [ARCHITECTURE.md](ARCHITECTURE.md) has the full design: data model, job lifecycle, guarantees, the SSRF defence, why MySQL and not Postgres, configuration, and known limits.
 
 ## Project layout
 
 ```
 cmd/crobat/              entrypoint: service wiring + CLI
 internal/domain/         tasks, jobs, priorities, state machine (no I/O)
-internal/app/            the six services and their ports
+internal/app/            ports shared by the services (TaskStore, JobStore, HistoryStore, Caller)
+internal/services/       the six services, one package + README each
 internal/adapter/        mysql · cassandra · caller (SSRF-safe HTTP) · httpapi (REST + JWT)
 deploy/mysql/schema.sql  tables and indexes
 loadtest/                k6 peak test + lag report

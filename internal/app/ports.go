@@ -1,5 +1,6 @@
-// Package app holds the six services. Each depends only on the ports below;
-// adapters (MySQL, Cassandra, HTTP) implement or drive them.
+// Package app holds the ports shared by the six services in
+// internal/services. Services depend only on these interfaces; adapters
+// (MySQL, Cassandra, HTTP) implement or drive them.
 package app
 
 import (
@@ -52,9 +53,9 @@ type Caller interface {
 	Call(ctx context.Context, j domain.Job) domain.Result
 }
 
-// every runs fn now and then on each tick until ctx ends. fn returns true to
+// Every runs fn now and then on each tick until ctx ends. fn returns true to
 // run again immediately (more work is waiting).
-func every(ctx context.Context, d time.Duration, fn func() bool) {
+func Every(ctx context.Context, d time.Duration, fn func() bool) {
 	t := time.NewTicker(d)
 	defer t.Stop()
 	for {
