@@ -31,6 +31,9 @@ var blocked = []netip.Prefix{
 	netip.MustParsePrefix("64:ff9b::/96"), // NAT64 can reach IPv4 internals
 }
 
+// allowedPorts are the only destination ports (tests swap it for a local server).
+var allowedPorts = map[uint16]bool{80: true, 443: true}
+
 // Allowed reports whether address ("ip:port") may be dialed. allow lists
 // extra prefixes (local development only).
 func Allowed(address string, allow []netip.Prefix) bool {
@@ -39,7 +42,7 @@ func Allowed(address string, allow []netip.Prefix) bool {
 		return false
 	}
 	ip := ap.Addr().Unmap()
-	if ap.Port() != 80 && ap.Port() != 443 {
+	if !allowedPorts[ap.Port()] {
 		return false
 	}
 	for _, p := range allow {

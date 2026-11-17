@@ -307,7 +307,30 @@ docker compose reads secrets and tunables from `.env` (template: [.env.example](
 
 ### Tests
 
-`go test ./...` runs unit tests for the domain rules (cron catch-up and timezones, the retry/dead state machine, backoff cap, fair pick) and the SSRF address filter. The MySQL and Cassandra paths were verified end to end against the compose stack:
+Every package has tests. `go test ./...` needs nothing running and covers:
+
+| Package | What is tested |
+|---|---|
+| `domain` | Validation, defaults, cron catch-up and timezones, the retry/dead state machine, backoff cap, fair pick, secrets never serialized |
+| `services/*` | Each service against in-memory fakes of its ports. Includes a regression test for the executor throughput cap and the archiver's "history first, then delete" order. |
+| `adapter/httpapi` | JWT verification (expired, forged, `alg: none`, wrong secret), status codes, tenant isolation, secrets never returned, internal errors not leaked |
+| `adapter/caller` | Headers and body sent, no redirects, timeouts, SSRF blocking at dial time, URLs never in errors |
+| `adapter/mysql` | AES-GCM round trip and deadlock retry |
+| `adapter/cassandra` | URL stripping, UTC month partitions |
+| `cmd/crobat` | CLI flag parsing |
+
+**Integration tests** for the two database adapters run against the compose stack. They use their own `crobat_test` database and keyspace, so they never touch the stack's data, and they skip when the variables are unset:
+
+```bash
+set -a; source .env; set +a
+MYSQL_TEST_DSN="root:$MYSQL_ROOT_PASSWORD@tcp(localhost:3306)/crobat_test" \
+CASSANDRA_TEST_HOSTS=localhost go test -race ./...
+```
+
+- **MySQL:** idempotent create, encryption at rest, optimistic versioning, schedule-once (`UNIQUE`), lease and fencing, the priority and anti-starvation lanes, tenant sharing, 4 concurrent claimers never claiming the same job, lease expiry to pending or dead, and DLQ retry surviving the archiver.
+- **Cassandra:** archive and read back, idempotent re-archive, newest-first history, no secrets stored, tenant isolation.
+
+These paths were also verified by hand end to end against the full stack:
 
 - now, cron, retry, and DLQ flows
 - idempotent create and tenant isolation
@@ -338,7 +361,7 @@ Shortcuts taken on purpose for now, each with the point at which to revisit it:
 |---|---|---|
 | One commit per result write | Measured bottleneck: MySQL CPU, 1.2–2.4k jobs/s on a laptop, critical p99 at the 1 s target ([LOADTESTING.md](LOADTESTING.md)) | Batch result writes per ~5 ms. Claim further ahead for critical only. |
 | A single `jobs` table | All claiming load lands on one MySQL primary | Shard `jobs` by hash (Vitess). Executors claim per shard. |
-| Fairness is per claim batch | A tenant with a huge backlog still gets an equal share of each batch, not a global quota | Per-tenant in-flight quotas or weighted fair queuing in the claim |
+| Fairness is per claim batch, within a candidate window of 4 × batch (priority, then due-time order) | A tenant whose older same-priority backlog exceeds the window delays other tenants' jobs first-in-first-out until it drains (found by `TestClaimSharesBatchesBetweenTenants`) | Per-tenant in-flight quotas or weighted fair queuing in the claim |
 | Scheduler updates `next_run_at` one row at a time | Shows up near tens of thousands of tasks per tick | Batched `UPDATE ... CASE` (marked `ponytail:` in code) |
 | Archiver deletes row by row | Archiving throughput | `DELETE ... WHERE (id, status, attempt) IN (...)` |
 | HS256 JWT with a shared secret, no API gateway | Fine for one issuer | RS256/JWKS behind the gateway. Per-tenant rate limits. |

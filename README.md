@@ -123,7 +123,13 @@ loadtest/                k6 peak test + lag report
 ## Development
 
 ```bash
-go test ./...              # domain rules and the SSRF filter
+go test -race ./...        # unit tests: every package, nothing to run first
+
+# + integration tests against the running stack (own test database and keyspace)
+set -a; source .env; set +a
+MYSQL_TEST_DSN="root:$MYSQL_ROOT_PASSWORD@tcp(localhost:3306)/crobat_test" \
+CASSANDRA_TEST_HOSTS=localhost go test -race ./...
+
 loadtest/run.sh            # the 30k-in-one-second peak (stack must be running)
 docker compose down -v     # stop and wipe local data
 ```
