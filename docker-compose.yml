@@ -1,0 +1,104 @@
+# Local stack: MySQL (tasks + jobs queue), Cassandra (history), the six
+# services, and a demo echo endpoint. Secrets and knobs come from .env
+# (cp .env.example .env).
+x-app: &app
+  image: crobat:dev
+  restart: on-failure
+  environment: &env
+    MYSQL_DSN: ${MYSQL_USER:-crobat}:${MYSQL_PASSWORD:?set in .env}@tcp(mysql:3306)/crobat
+    CASSANDRA_HOSTS: cassandra
+    SECRETS_KEY: ${SECRETS_KEY:?set in .env}
+    JWT_SECRET: ${JWT_SECRET:?set in .env}
+  networks: [crobat]
+  depends_on:
+    mysql: { condition: service_healthy }
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set in .env}
+      MYSQL_DATABASE: crobat
+      MYSQL_USER: ${MYSQL_USER:-crobat}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set in .env}
+    ports: ["3306:3306"]
+    volumes:
+      - ./deploy/mysql:/docker-entrypoint-initdb.d:ro
+      - mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u\"$$MYSQL_USER\" -p\"$$MYSQL_PASSWORD\""]
+      interval: 3s
+      retries: 40
+    networks: [crobat]
+
+  cassandra:
+    image: cassandra:4.1
+    environment:
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 128M
+    ports: ["9042:9042"]
+    volumes: [cassandra:/var/lib/cassandra]
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "describe keyspaces"]
+      interval: 10s
+      retries: 30
+    networks: [crobat]
+
+  task-api:
+    <<: *app
+    build: . # the one image every service runs
+    command: [serve, task-api]
+    ports: ["8080:8080"]
+
+  job-api:
+    <<: *app
+    command: [serve, job-api]
+    ports: ["8081:8081"]
+    depends_on:
+      mysql: { condition: service_healthy }
+      cassandra: { condition: service_healthy }
+
+  scheduler:
+    <<: *app
+    command: [serve, scheduler]
+
+  executor:
+    <<: *app
+    command: [serve, executor]
+    deploy: { replicas: "${EXECUTOR_REPLICAS:-2}" }
+    environment:
+      <<: *env
+      EXECUTOR_WORKERS: ${EXECUTOR_WORKERS:-64}
+      EXECUTOR_POLL: ${EXECUTOR_POLL:-500ms}
+      # Dev only: lets the executor reach the echo container. Port rule still applies.
+      EXECUTOR_ALLOW_CIDRS: 172.28.0.100/32
+
+  reconciler:
+    <<: *app
+    command: [serve, reconciler]
+
+  archiver:
+    <<: *app
+    command: [serve, archiver]
+    environment:
+      <<: *env
+      ARCHIVE_SUCCEEDED_AFTER: ${ARCHIVE_SUCCEEDED_AFTER:-1h}
+    depends_on:
+      mysql: { condition: service_healthy }
+      cassandra: { condition: service_healthy }
+
+  echo:
+    <<: *app
+    command: [serve, echo]
+    depends_on: []
+    networks:
+      crobat: { ipv4_address: 172.28.0.100 }
+
+networks:
+  crobat:
+    ipam:
+      config: [{ subnet: 172.28.0.0/16 }]
+
+volumes:
+  mysql:
+  cassandra:
